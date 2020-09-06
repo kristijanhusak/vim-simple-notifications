@@ -68,11 +68,12 @@ function! s:notification_nvim(msg, opts) abort
         \ 'relative': 'editor',
         \ 'width': width,
         \ 'height': height,
-        \ 'style': 'minimal'
+        \ 'style': 'minimal',
         \ })
 
   silent! call nvim_win_close(s:win, v:true)
   let buf = nvim_create_buf(v:false, v:true)
+  silent! exe 'autocmd BufEnter <buffer='.buf.'> :bw!'
   call nvim_buf_set_lines(buf, 0, -1, v:false, [a:msg])
 
   let s:win = nvim_open_win(buf, v:false, opts)
@@ -99,6 +100,7 @@ function! s:notification_vim(msg, opts) abort
         \ 'minwidth': width,
         \ 'maxwidth': width,
         \ 'time': delay,
+        \ 'close': 'click',
         \ 'padding': [0, 0, 0, 1],
         \ })
 
