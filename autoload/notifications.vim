@@ -64,7 +64,7 @@ endfunction
 function! s:notification_nvim(msg, opts) abort
   let width = get(a:opts, 'width', s:width)
   let title = get(a:opts, 'title', s:title)
-  let msg = type(a:msg) ==? type('') ? [a:msg] : a:msg
+  let msg = type(a:msg) !=? type([]) ? [a:msg] : a:msg
   if !empty(title)
     let msg = [title] + msg
   endif
@@ -130,6 +130,8 @@ function! s:notification_echo(msg, opts) abort
   let title = !empty(title) ? title.' ' : ''
   if type(a:msg) ==? type('')
     echom title.a:msg
+  elseif type(a:msg) !=? type([])
+    echom title.string(a:msg)
   else
     echom title.a:msg[0]
     for msg in a:msg[1:]
