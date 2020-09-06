@@ -55,6 +55,11 @@ let s:hl_by_type = {
       \ 'warning': 'NotificationWarning',
       \ }
 
+function! s:nvim_close() abort
+  silent! call nvim_win_close(s:win, v:true)
+  silent! call timer_stop(s:timer)
+endfunction
+
 function! s:notification_nvim(msg, opts) abort
   let width = get(a:opts, 'width', s:width)
   let height = len(split(a:msg,'.\{'.width.'}\zs'))
@@ -72,7 +77,7 @@ function! s:notification_nvim(msg, opts) abort
         \ 'style': 'minimal',
         \ })
 
-  silent! call nvim_win_close(s:win, v:true)
+  call s:nvim_close()
   let buf = nvim_create_buf(v:false, v:true)
   silent! exe 'autocmd BufEnter <buffer='.buf.'> :bw!'
   call nvim_buf_set_lines(buf, 0, -1, v:false, [a:msg])
@@ -81,8 +86,7 @@ function! s:notification_nvim(msg, opts) abort
   call nvim_win_set_option(s:win, 'wrap', v:true)
   call nvim_win_set_option(s:win, 'signcolumn', 'yes') "simulate left padding
   call nvim_win_set_option(s:win, 'winhl', 'Normal:'.s:hl_by_type[type])
-  call timer_stop(s:timer)
-  let s:timer = timer_start(delay, {-> nvim_win_close(s:win, v:true)})
+  let s:timer = timer_start(delay, {-> s:nvim_close()})
 endfunction
 
 function! s:notification_vim(msg, opts) abort
