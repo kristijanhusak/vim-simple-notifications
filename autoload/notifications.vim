@@ -7,6 +7,7 @@
 let s:delay = 7000     "Hide after this number of milliseconds
 let s:width = 40       "Default notification width
 let s:pos = 'topright' "Default position for notification
+let s:title = ''       "Title on notification
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 "                  Public API, adapt names to your needs                      "
@@ -33,7 +34,7 @@ let s:neovim_float = has('nvim') && exists('*nvim_open_win')
 let s:vim_popup = exists('*popup_create')
 
 function! s:notification(msg, opts) abort
-  if empty(trim(a:msg))
+  if empty(a:msg)
     return
   endif
   call s:setup_colors()
@@ -62,7 +63,16 @@ endfunction
 
 function! s:notification_nvim(msg, opts) abort
   let width = get(a:opts, 'width', s:width)
-  let height = len(split(a:msg,'.\{'.width.'}\zs'))
+  let title = get(a:opts, 'title', s:title)
+  let msg = type(a:msg) ==? type('') ? [a:msg] : a:msg
+  if !empty(title)
+    let msg = [title] + msg
+  endif
+
+  let height = 0
+  for line in msg
+    let height += len(split(line,'.\{'.width.'}\zs'))
+  endfor
   let delay = get(a:opts, 'delay', s:delay)
   let type = get(a:opts, 'type', 'info')
   let pos = get(a:opts, 'pos', s:pos)
@@ -80,7 +90,7 @@ function! s:notification_nvim(msg, opts) abort
   call s:nvim_close()
   let buf = nvim_create_buf(v:false, v:true)
   silent! exe 'autocmd BufEnter <buffer='.buf.'> :bw!'
-  call nvim_buf_set_lines(buf, 0, -1, v:false, [a:msg])
+  call nvim_buf_set_lines(buf, 0, -1, v:false, msg)
 
   let s:win = nvim_open_win(buf, v:false, opts)
   call nvim_win_set_option(s:win, 'wrap', v:true)
@@ -94,6 +104,7 @@ function! s:notification_vim(msg, opts) abort
   let delay = get(a:opts, 'delay', s:delay)
   let type = get(a:opts, 'type', 'info')
   let pos = get(a:opts, 'pos', s:pos)
+  let title = get(a:opts, 'title', s:title)
   let pos_opts = s:get_pos(pos)
   let pos_opts.line = pos_opts.row
   unlet! pos_opts.row
@@ -103,6 +114,7 @@ function! s:notification_vim(msg, opts) abort
         \ 'maxwidth': width,
         \ 'time': delay,
         \ 'close': 'click',
+        \ 'title': title,
         \ 'padding': [0, 0, 0, 1],
         \ })
 
@@ -113,10 +125,17 @@ endfunction
 
 function! s:notification_echo(msg, opts) abort
   let type = get(a:opts, 'type', 'info')
+  let title = get(a:opts, 'title', s:title)
   silent! exe 'echohl '.s:hl_by_type[type]
-  let msg = type(a:msg) ==? type('') ? a:msg : string(a:msg)
-  redraw!
-  echom msg
+  let title = !empty(title) ? title.' ' : ''
+  if type(a:msg) ==? type('')
+    echom title.a:msg
+  else
+    echom title.a:msg[0]
+    for msg in a:msg[1:]
+      echom msg
+    endfor
+  endif
   echohl None
 endfunction
 
@@ -141,15 +160,15 @@ function! s:setup_colors() abort
     let error_fg = '#FFFFFF'
   endif
 
-  let normal_bg = synIDattr(hlID('Normal'), 'fg')
-  let normal_fg = synIDattr(hlID('Normal'), 'bg')
+  let normal_bg = synIDattr(hlID('Normal'), 'bg')
+  let normal_fg = synIDattr(hlID('Normal'), 'fg')
   if empty(normal_bg)
     let normal_bg = normal_fg
     let normal_fg = '#FFFFFF'
   endif
 
   if s:neovim_float || s:vim_popup
-    silent! exe 'hi NotificationInfo guifg='.normal_fg.' guibg='.normal_bg
+    silent! exe 'hi NotificationInfo guifg='.normal_bg.' guibg='.normal_fg
     silent! exe 'hi NotificationError guifg='.error_fg.' guibg='.error_bg
     silent! exe 'hi NotificationWarning guifg='.warning_fg.' guibg='.warning_bg
   else
