@@ -37,13 +37,14 @@ function! s:notification(msg, opts) abort
   if empty(a:msg)
     return
   endif
-  call s:setup_colors()
+  let use_echo = get(a:opts, 'echo', 0)
+  call s:setup_colors(use_echo)
 
-  if s:neovim_float
+  if s:neovim_float && !use_echo
     return s:notification_nvim(a:msg, a:opts)
   endif
 
-  if s:vim_popup
+  if s:vim_popup && !use_echo
     return s:notification_vim(a:msg, a:opts)
   endif
 
@@ -127,6 +128,7 @@ function! s:notification_echo(msg, opts) abort
   let type = get(a:opts, 'type', 'info')
   let title = get(a:opts, 'title', s:title)
   silent! exe 'echohl '.s:hl_by_type[type]
+  redraw!
   let title = !empty(title) ? title.' ' : ''
   if type(a:msg) ==? type('')
     echom title.a:msg
@@ -141,7 +143,7 @@ function! s:notification_echo(msg, opts) abort
   echohl None
 endfunction
 
-function! s:setup_colors() abort
+function! s:setup_colors(use_echo) abort
   let warning_fg = ''
   let warning_bg = ''
   let error_fg = ''
@@ -169,7 +171,7 @@ function! s:setup_colors() abort
     let normal_fg = '#FFFFFF'
   endif
 
-  if s:neovim_float || s:vim_popup
+  if (s:neovim_float || s:vim_popup) && !a:use_echo
     silent! exe 'hi NotificationInfo guifg='.normal_bg.' guibg='.normal_fg
     silent! exe 'hi NotificationError guifg='.error_fg.' guibg='.error_bg
     silent! exe 'hi NotificationWarning guifg='.warning_fg.' guibg='.warning_bg
