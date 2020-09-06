@@ -50,6 +50,7 @@ function! s:notification(msg, opts) abort
 endfunction
 
 let s:hl_by_type = {
+      \ 'info': 'NotificationInfo',
       \ 'error': 'NotificationError',
       \ 'warning': 'NotificationWarning',
       \ }
@@ -79,10 +80,7 @@ function! s:notification_nvim(msg, opts) abort
   let s:win = nvim_open_win(buf, v:false, opts)
   call nvim_win_set_option(s:win, 'wrap', v:true)
   call nvim_win_set_option(s:win, 'signcolumn', 'yes') "simulate left padding
-
-  if has_key(s:hl_by_type, type)
-    call nvim_win_set_option(s:win, 'winhl', 'Normal:'.s:hl_by_type[type])
-  endif
+  call nvim_win_set_option(s:win, 'winhl', 'Normal:'.s:hl_by_type[type])
   call timer_stop(s:timer)
   let s:timer = timer_start(delay, {-> nvim_win_close(s:win, v:true)})
 endfunction
@@ -104,18 +102,14 @@ function! s:notification_vim(msg, opts) abort
         \ 'padding': [0, 0, 0, 1],
         \ })
 
-  if has_key(s:hl_by_type, type)
-    let opts.highlight = s:hl_by_type[type]
-  endif
+  let opts.highlight = s:hl_by_type[type]
   call popup_hide(s:win)
   let s:win = popup_create(a:msg, opts)
 endfunction
 
 function! s:notification_echo(msg, opts) abort
   let type = get(a:opts, 'type', 'info')
-  if has_key(s:hl_by_type, type)
-    silent! exe 'echohl '.s:hl_by_type[type]
-  endif
+  silent! exe 'echohl '.s:hl_by_type[type]
   let msg = type(a:msg) ==? type('') ? a:msg : string(a:msg)
   redraw!
   echom msg
@@ -127,6 +121,8 @@ function! s:setup_colors() abort
   let warning_bg = ''
   let error_fg = ''
   let error_bg = ''
+  let normal_fg = ''
+  let normal_bg = ''
   let warning_bg = synIDattr(hlID('WarningMsg'), 'bg')
   let warning_fg = synIDattr(hlID('WarningMsg'), 'fg')
   if empty(warning_bg)
@@ -141,10 +137,19 @@ function! s:setup_colors() abort
     let error_fg = '#FFFFFF'
   endif
 
+  let normal_bg = synIDattr(hlID('Normal'), 'fg')
+  let normal_fg = synIDattr(hlID('Normal'), 'bg')
+  if empty(normal_bg)
+    let normal_bg = normal_fg
+    let normal_fg = '#FFFFFF'
+  endif
+
   if s:neovim_float || s:vim_popup
+    silent! exe 'hi NotificationInfo guifg='.normal_fg.' guibg='.normal_bg
     silent! exe 'hi NotificationError guifg='.error_fg.' guibg='.error_bg
     silent! exe 'hi NotificationWarning guifg='.warning_fg.' guibg='.warning_bg
   else
+    silent! exe 'hi NotificationInfo guifg='.normal_fg.' guibg=NONE'
     silent! exe 'hi NotificationError guifg='.error_bg.' guibg=NONE'
     silent! exe 'hi NotificationWarning guifg='.warning_bg.' guibg=NONE'
   endif
@@ -154,7 +159,7 @@ function! s:get_pos(pos) abort
   let min_col = s:neovim_float ? 1 : 2
   let min_row = s:neovim_float ? 0 : 1
   let max_col = &columns - 1
-  let max_lines = &lines - 2
+  let max_lines = &lines - 3
   let pos_data = {'col': min_col, 'row': min_row}
 
   if a:pos ==? 'topright'
