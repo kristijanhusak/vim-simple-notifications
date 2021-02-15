@@ -69,14 +69,27 @@ function! s:notification_nvim(msg, opts) abort
     let msg = [title] + msg
   endif
 
-  let height = 0
+  let content = []
   for line in msg
-    let height += len(split(line,'.\{'.width.'}\zs'))
+    let line_msg = split(line,'.\{'.width.'}\zs')
+    let content = content + line_msg
   endfor
+  let height = len(content) + 2
   let delay = get(a:opts, 'delay', s:delay)
   let type = get(a:opts, 'type', 'info')
   let pos = get(a:opts, 'pos', s:pos)
   let pos_map = {'topleft': 'NW', 'topright': 'NE', 'botleft': 'SW', 'botright': 'SE', 'top': 'NW', 'bottom': 'SW'}
+
+  let width += 2
+
+  let lines = []
+  call add(lines, "╭" . repeat("─", width - 2) . "╮")
+  for line in content
+    let line_width = strchars(line)
+    call add(lines, "│" . line . repeat(' ', width - line_width - 2). "│")
+  endfor
+  call add(lines, "╰" . repeat("─", width - 2) . "╯")
+
 
   let pos_opts = s:get_pos(pos, width)
   let pos_opts.anchor = pos_map[pos]
@@ -89,12 +102,12 @@ function! s:notification_nvim(msg, opts) abort
 
   call s:nvim_close()
   let buf = nvim_create_buf(v:false, v:true)
-  silent! exe 'autocmd BufEnter <buffer='.buf.'> :bw!'
-  call nvim_buf_set_lines(buf, 0, -1, v:false, msg)
+  " silent! exe 'autocmd BufEnter <buffer='.buf.'> :bw!'
+  call nvim_buf_set_lines(buf, 0, -1, v:false, lines)
 
   let s:win = nvim_open_win(buf, v:false, opts)
-  call nvim_win_set_option(s:win, 'wrap', v:true)
-  call nvim_win_set_option(s:win, 'signcolumn', 'yes') "simulate left padding
+  call nvim_win_set_option(s:win, 'wrap', v:false)
+  call nvim_win_set_option(s:win, 'signcolumn', 'no') "simulate left padding
   call nvim_win_set_option(s:win, 'winhl', 'Normal:'.s:hl_by_type[type])
   let s:timer = timer_start(delay, {-> s:nvim_close()})
 endfunction
